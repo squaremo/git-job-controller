@@ -1,0 +1,7 @@
+apiVersion: update.toolkit.fluxcd.io/v1alpha1
+kind: GitUpdateJob
+metadata:
+  name: gitupdatejob-sample
+spec:
+  # Add fields here
+  foo: bar

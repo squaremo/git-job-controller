@@ -1,0 +1,20 @@
+# permissions for end users to view gitupdatejobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gitupdatejob-viewer-role
+rules:
+- apiGroups:
+  - update.toolkit.fluxcd.io
+  resources:
+  - gitupdatejobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - update.toolkit.fluxcd.io
+  resources:
+  - gitupdatejobs/status
+  verbs:
+  - get

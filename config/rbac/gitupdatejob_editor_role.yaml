@@ -1,0 +1,24 @@
+# permissions for end users to edit gitupdatejobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gitupdatejob-editor-role
+rules:
+- apiGroups:
+  - update.toolkit.fluxcd.io
+  resources:
+  - gitupdatejobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - update.toolkit.fluxcd.io
+  resources:
+  - gitupdatejobs/status
+  verbs:
+  - get

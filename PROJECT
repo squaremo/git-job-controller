@@ -1,3 +1,7 @@
 domain: toolkit.fluxcd.io
 repo: github.com/fluxcd/git-job-controller
+resources:
+- group: update
+  kind: GitUpdateJob
+  version: v1alpha1
 version: "2"
