@@ -8,6 +8,16 @@ metadata:
   creationTimestamp: null
   name: gitupdatejobs.update.toolkit.fluxcd.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.startedTime
+    name: Started
+    type: string
+  - JSONPath: .status.finishedTime
+    name: Finished
+    type: string
+  - JSONPath: .status.result
+    name: Result
+    type: string
   group: update.toolkit.fluxcd.io
   names:
     kind: GitUpdateJob
@@ -15,6 +25,8 @@ spec:
     plural: gitupdatejobs
     singular: gitupdatejob
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: GitUpdateJob is the Schema for the gitupdatejobs API
@@ -34,13 +46,48 @@ spec:
         spec:
           description: GitUpdateJobSpec defines the desired state of GitUpdateJob
           properties:
-            foo:
-              description: Foo is an example field of GitUpdateJob. Edit GitUpdateJob_types.go
-                to remove/update
+            args:
+              description: Args lists any arguments to be given to the image.
+              items:
+                type: string
+              type: array
+            functionConfig:
+              description: FunctionConfig gives a resource to supply as the function's
+                input.
               type: string
+            gitRepositoryRef:
+              description: GitRepositoryRef refers to a GitRepository object giving
+                access to the repository on which to run the job.
+              properties:
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    TODO: Add other useful fields. apiVersion, kind, uid?'
+                  type: string
+              type: object
+            image:
+              description: Image gives the image to run as a function in the git repo.
+              type: string
+          required:
+          - gitRepositoryRef
+          - image
           type: object
         status:
           description: GitUpdateJobStatus defines the observed state of GitUpdateJob
+          properties:
+            completionTime:
+              description: FinishedTime gives the time the job finished running.
+              format: date-time
+              type: string
+            error:
+              description: Error gives the error message, if the job ran into one.
+              type: string
+            result:
+              description: Result gives the outcome of the job, once completed.
+              type: string
+            startTime:
+              description: StartTime gives the time the job started, if started.
+              format: date-time
+              type: string
           type: object
       type: object
   version: v1alpha1
