@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,56 +54,55 @@ func (r *GitUpdateJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	// the work. First task when reconciling: find that Job and see
 	// what _its_ status is.
 
-	// the name of the batch job is the same as the name of the git update job
-	// TODO: should uniquify it (deterministically!); or, index by owner reference
-	batchJobName := req.NamespacedName
-	var batchJob batchv1.Job
-	err := r.Get(ctx, batchJobName, &batchJob)
+	// the name of the pod is the same as the name of the git update
+	// job TODO: should uniquify it (deterministically!); or, index by
+	// owner reference
+	podName := req.NamespacedName
+	var pod corev1.Pod
+	err := r.Get(ctx, podName, &pod)
 	if err == nil {
-		log.V(debug).Info("found batch/v1 Job", "name", batchJobName)
-		updateJob.Status = r.makeStatusFromBatchJob(batchJob)
+		log.V(debug).Info("found Pod", "name", podName)
+		updateJob.Status = r.makeStatusFromPod(pod)
 		return ctrl.Result{}, r.Status().Update(ctx, &updateJob)
 	} else if client.IgnoreNotFound(err) == nil {
-		log.V(debug).Info("batch/v1 Job does not exist; will be created", "name", batchJobName)
-		batchJob, err = r.createBatchJob(updateJob)
+		log.V(debug).Info("Pod does not exist; will be created", "name", podName)
+		pod, err = r.createPod(updateJob)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.Create(ctx, &batchJob); err != nil {
+		if err := r.Create(ctx, &pod); err != nil {
 			return ctrl.Result{}, err
 		}
-		log.Info("created batch/v1 Job", "name", batchJobName)
-		updateJob.Status = updatev1alpha1.GitUpdateJobStatus{
-			Result: updatev1alpha1.GitJobUnknown,
-		}
-		// this should be queued again when the job changes, because
-		// it is owned
-		return ctrl.Result{}, r.Status().Update(ctx, &updateJob)
+		log.Info("created Pod", "name", podName)
+		return ctrl.Result{}, nil
 	} else {
 		return ctrl.Result{}, err
 	}
 }
 
-func (r *GitUpdateJobReconciler) createBatchJob(update updatev1alpha1.GitUpdateJob) (batchv1.Job, error) {
-	job := batchv1.Job{}
-	err := ctrl.SetControllerReference(&update, &job, r.Scheme)
-	return job, err
+func (r *GitUpdateJobReconciler) createPod(update updatev1alpha1.GitUpdateJob) (corev1.Pod, error) {
+	pod := corev1.Pod{}
+	err := ctrl.SetControllerReference(&update, &pod, r.Scheme)
+	return pod, err
 }
 
-func (r *GitUpdateJobReconciler) makeStatusFromBatchJob(job batchv1.Job) updatev1alpha1.GitUpdateJobStatus {
+func (r *GitUpdateJobReconciler) makeStatusFromPod(pod corev1.Pod) updatev1alpha1.GitUpdateJobStatus {
 	var status updatev1alpha1.GitUpdateJobStatus
-	status.StartTime = job.Status.StartTime
-	status.CompletionTime = job.Status.CompletionTime
-	switch {
-	case job.Status.Succeeded > 0:
-		status.Result = updatev1alpha1.GitJobSuccess
-	case job.Status.Failed > 0:
-		status.Result = updatev1alpha1.GitJobFailure
-	default:
+	status.StartTime = pod.Status.StartTime
+	switch pod.Status.Phase {
+	case corev1.PodSucceeded:
+		status.Result = updatev1alpha1.GitJobSucceeded
+	case corev1.PodFailed:
+		status.Result = updatev1alpha1.GitJobFailed
+	case corev1.PodUnknown:
 		status.Result = updatev1alpha1.GitJobUnknown
+	default:
+		// leave it blank
 	}
-	// TODO not sure how to get an error, if there is one; batchv1.Job
-	// doesn't have space for it in its status
+	// TODO:
+	// - completion time (which will have to be when the pod completion was noticed)
+	// - error -- analyse the initContainer/container logs
+	// + other info from stdout
 	return status
 }
 
@@ -112,6 +111,6 @@ func (r *GitUpdateJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&updatev1alpha1.GitUpdateJob{}).
 		// any time a job changes, reconcile its GitUpdateJob owner
 		// (if it has one)
-		Owns(&batchv1.Job{}).
+		Owns(&corev1.Pod{}).
 		Complete(r)
 }

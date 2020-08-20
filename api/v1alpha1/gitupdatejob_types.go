@@ -42,9 +42,9 @@ type GitUpdateJobSpec struct {
 type GitJobResult string
 
 const (
-	GitJobSuccess GitJobResult = "Success"
-	GitJobFailure GitJobResult = "Failure"
-	GitJobUnknown GitJobResult = "Unknown"
+	GitJobSucceeded GitJobResult = "Succeeded"
+	GitJobFailed    GitJobResult = "Failed"
+	GitJobUnknown   GitJobResult = "Unknown"
 )
 
 // GitUpdateJobStatus defines the observed state of GitUpdateJob
